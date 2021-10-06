@@ -17,19 +17,19 @@ provider "aws" {
   default_tags {
     tags = {
       Environment = var.environment
-      Application = var.imgmgr
+      Application = var.application
     }
   }
 }
 
-# data "terraform_remote_state" "vpc" {
-#   backend = "s3"
-#   config = {
-#     bucket = "ssilvidi-dev-tf-state-terraformstatebucket-1my31yzv88c0f"
-#     region = "us-east-2"
-#     key = "vpc.tfstate"
-#    }
-# }
+data "terraform_remote_state" "vpc" {
+  backend = "s3"
+  config = {
+    bucket = "ssilvidi-dev-tf-state-terraformstatebucket-1my31yzv88c0f"
+    region = "us-east-2"
+    key = "env:/dev/vpc.tfstate"
+   }
+}
 
 resource "aws_iam_instance_profile" "instance_profile" {
   role = aws_iam_role.imgmgr_role.name
@@ -105,18 +105,13 @@ resource "aws_s3_bucket" "img_bucket" {
 
 resource "aws_lb" "load_balancer" {
   security_groups = [aws_security_group.sg_lb.id]
-  subnets = var.load_balancer_subnets
-  tags = {
-    Environment = var.environment
-    Application = var.application
-  }
+  subnets = data.terraform_remote_state.vpc.outputs.public_subnets
 }
 
 resource "aws_alb_target_group" "lb_targets" {
   port = 80
   protocol = "HTTP"
-  # vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
-  vpc_id = var.vpc_id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 }
 
 resource "aws_alb_listener" "lb_http" {
@@ -131,8 +126,7 @@ resource "aws_alb_listener" "lb_http" {
 
 resource "aws_security_group" "sg_lb" {
   description = "allow http from internet"
-  # vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
-  vpc_id = var.vpc_id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   ingress {
       from_port        = 80
@@ -153,8 +147,7 @@ resource "aws_security_group" "sg_lb" {
 
 resource "aws_security_group" "sg_server" {
   description = "allow http to app servers"
-  # vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
-  vpc_id = var.vpc_id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   ingress {
       from_port        = 80
@@ -190,7 +183,7 @@ resource "aws_autoscaling_group" "app_server_group" {
   name_prefix = "${var.customer}-${var.environment}-"
   max_size = var.app_server_max_count
   min_size = var.app_server_min_count
-  vpc_zone_identifier = var.app_subnets
+  vpc_zone_identifier = data.terraform_remote_state.vpc.outputs.private_subnets
   health_check_grace_period = 300
   health_check_type = var.health_check_type
   target_group_arns = [aws_alb_target_group.lb_targets.arn]
@@ -200,3 +193,4 @@ resource "aws_autoscaling_group" "app_server_group" {
     version = "$Latest"
   }
 }
+

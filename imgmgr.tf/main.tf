@@ -22,6 +22,8 @@ provider "aws" {
   }
 }
 
+# data
+
 data "terraform_remote_state" "vpc" {
   backend = "s3"
   config = {
@@ -45,6 +47,8 @@ data "aws_ami" "latest-amazon2" {
     values = ["x86_64"]
   }
 }
+
+# resources
 
 resource "aws_iam_instance_profile" "instance_profile" {
   role = aws_iam_role.imgmgr_role.name
@@ -209,9 +213,67 @@ resource "aws_autoscaling_group" "app_server_group" {
   }
 }
 
+resource "aws_autoscaling_policy" "scale_out_policy" {
+  name = "scale_out_policy"
+  autoscaling_group_name = aws_autoscaling_group.app_server_group.name
+  adjustment_type = "ChangeInCapacity"
+  policy_type = "SimpleScaling"
+  cooldown = 300
+  scaling_adjustment = 1
+}
+
+resource "aws_autoscaling_policy" "scale_in_policy" {
+  name = "scale_in_policy"
+  autoscaling_group_name = aws_autoscaling_group.app_server_group.name
+  adjustment_type = "ChangeInCapacity"
+  policy_type = "SimpleScaling"
+  cooldown = 300
+  scaling_adjustment = -1
+}
+
+resource "aws_cloudwatch_metric_alarm" "asg_cpu_high" {
+  alarm_name = "asg_cpu_high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = 1
+  datapoints_to_alarm = 1
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = 300
+  statistic = "Average"
+  threshold = var.scale_out_threshold
+  treat_missing_data = "breaching"
+  
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.app_server_group.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_out_policy.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "asg_cpu_low" {
+  alarm_name = "asg_cpu_low"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods = 1
+  datapoints_to_alarm = 1
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = 300
+  statistic = "Average"
+  threshold = var.scale_in_threshold
+  treat_missing_data = "breaching"
+  
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.app_server_group.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_in_policy.arn]
+}
+
+
 
 # outputs
+
 output "imgmgr_url" {
   value = join("",["http://",aws_lb.load_balancer.dns_name])
-  description = "The URL for "
+  description = "The URL for img-mgr"
 }

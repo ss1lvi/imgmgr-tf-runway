@@ -210,7 +210,22 @@ resource "aws_autoscaling_group" "app_server_group" {
 
   launch_template {
     id = aws_launch_template.imgmgr_template.id
-    version = "$Latest"
+    version = aws_launch_template.imgmgr_template.latest_version
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+    
+    preferences {
+      min_healthy_percentage = 50
+    }
+    triggers = ["tag"]
+  }
+
+  tag {
+    key = "imgmgr_version"
+    value = aws_launch_template.imgmgr_template.latest_version
+    propagate_at_launch = true
   }
 }
 
@@ -287,9 +302,10 @@ resource "aws_cloudfront_distribution" "cf" {
   
   default_cache_behavior {
     allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods = ["GET", "HEAD"]
+    cached_methods = [ "GET", "HEAD" ]
     target_origin_id = "imgmgr-origin"
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    # cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     viewer_protocol_policy = "redirect-to-https"
   }
 

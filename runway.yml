@@ -5,6 +5,7 @@ deployments:
       - path: tf-state.cfn
       - path: vpc.tf
       - path: imgmgr.tf
+      - path: itsalwaysdns.tf
       # - etc...
     regions:
       - us-east-2

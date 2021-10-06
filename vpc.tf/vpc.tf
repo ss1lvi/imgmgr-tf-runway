@@ -160,9 +160,13 @@ output "vpc_id" {
 }
 
 output "availability_zones" {
-  value = "${data.aws_availability_zones.available.names[0]}"
+  value = [aws_subnet.TFtopSubnetPriv1.availability_zone, aws_subnet.TFtopSubnetPriv2.availability_zone]
 }
 
-output "name" {
-  
+output "public_subnets" {
+  value = [aws_subnet.TFtopSubnetPub1.id, aws_subnet.TFtopSubnetPub2.id]
+}
+
+output "private_subnets" {
+  value = [aws_subnet.TFtopSubnetPriv1.id, aws_subnet.TFtopSubnetPriv2.id]
 }

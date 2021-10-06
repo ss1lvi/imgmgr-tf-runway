@@ -190,6 +190,7 @@ resource "aws_launch_template" "imgmgr_template" {
   instance_type = var.instance_type
   key_name = var.ssh_key
   vpc_security_group_ids = [aws_security_group.sg_server.id]
+  update_default_version = true
 
   iam_instance_profile {
     arn = aws_iam_instance_profile.instance_profile.arn

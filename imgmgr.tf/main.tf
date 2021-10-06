@@ -31,6 +31,21 @@ data "terraform_remote_state" "vpc" {
    }
 }
 
+data "aws_ami" "latest-amazon2" {
+  owners = ["amazon"]
+  most_recent = true
+
+  filter {
+    name = "name"
+    values = ["amzn2-ami-hvm*"]
+  }
+
+  filter {
+    name = "architecture"
+    values = ["x86_64"]
+  }
+}
+
 resource "aws_iam_instance_profile" "instance_profile" {
   role = aws_iam_role.imgmgr_role.name
 }
@@ -167,7 +182,7 @@ resource "aws_security_group" "sg_server" {
 
 resource "aws_launch_template" "imgmgr_template" {
   name = "imgmgr_template"
-  image_id = var.image_id
+  image_id = data.aws_ami.latest-amazon2.image_id
   instance_type = var.instance_type
   key_name = var.ssh_key
   vpc_security_group_ids = [aws_security_group.sg_server.id]
@@ -194,3 +209,9 @@ resource "aws_autoscaling_group" "app_server_group" {
   }
 }
 
+
+# outputs
+output "imgmgr_url" {
+  value = join("",["http://",aws_lb.load_balancer.dns_name])
+  description = "The URL for "
+}

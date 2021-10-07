@@ -23,6 +23,7 @@ provider "aws" {
 }
 
 provider "aws" {
+# cloudfront/ACM certificates require us-east-1 region
   alias = "east1"
   region  = "us-east-1"
 }
@@ -39,6 +40,7 @@ data "terraform_remote_state" "vpc" {
 }
 
 data "aws_ami" "latest-amazon2" {
+# finds the latest amazon linux 2 AMI
   owners = ["amazon"]
   most_recent = true
 
@@ -54,6 +56,7 @@ data "aws_ami" "latest-amazon2" {
 }
 
 data "aws_acm_certificate" "cf_cert" {
+# looks up the certificate only if cf_alias variable is populated
   count = var.cf_alias != null ? 1 : 0
 
   provider = aws.east1
@@ -70,6 +73,7 @@ resource "aws_iam_instance_profile" "instance_profile" {
 
 resource "aws_iam_role" "imgmgr_role" {
   name = "imgmgr_role"
+  managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"]
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -83,7 +87,6 @@ resource "aws_iam_role" "imgmgr_role" {
       }
     ]
   })
-  managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"]
 
   inline_policy {
     name = "s3getputdelete"
@@ -210,6 +213,7 @@ resource "aws_launch_template" "imgmgr_template" {
     arn = aws_iam_instance_profile.instance_profile.arn
   }
 
+  # reads user_data from install.sh, updates the s3 bucket with the bucket created earlier, and converts to base64
   user_data = base64encode(templatefile("${path.module}/install.sh", { S3Bucket = aws_s3_bucket.img_bucket.id }))
 }
 
@@ -302,6 +306,7 @@ resource "aws_cloudwatch_metric_alarm" "asg_cpu_low" {
 resource "aws_cloudfront_distribution" "cf" {
   enabled = true
   price_class = "PriceClass_100"
+  # assigns alias if cf_alias variable exists
   aliases = var.cf_alias != null ? [var.cf_alias] : null
   
   origin {
@@ -325,7 +330,7 @@ resource "aws_cloudfront_distribution" "cf" {
   }
 
   viewer_certificate {
-    # cloudfront_default_certificate = true
+    # configures certificates if cf_alias variable exists
     cloudfront_default_certificate = var.cf_alias != null ? null : true
     acm_certificate_arn = var.cf_alias != null ? data.aws_acm_certificate.cf_cert[0].arn : null
     ssl_support_method = var.cf_alias != null ? "sni-only" : null
@@ -341,6 +346,7 @@ resource "aws_cloudfront_distribution" "cf" {
 # outputs
 
 output "cloudfront_url" {
+  # sets value to alias url if cf_alias exists, or default cloudfront URL if not
   value = var.cf_alias != null ? join("",["https://", one(aws_cloudfront_distribution.cf.aliases)]) : join("",["https://", aws_cloudfront_distribution.cf.domain_name])
   description = "The CloudFront URL for img-mgr"
 }

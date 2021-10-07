@@ -79,3 +79,9 @@ variable "scale_in_threshold" {
   type = number
   description = "CPU utilization threshold to scale in instances"
 }
+
+variable "cf_alias" {
+  type = string
+  description = "(optional) CloudFront alias URL"
+  default = null
+}

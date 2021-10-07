@@ -13,3 +13,4 @@ health_check_type = "EC2"
 instance_type = "t2.micro"
 scale_out_threshold = 50
 scale_in_threshold = 15
+cf_alias = "imgmgr.aws.silvidi.xyz"

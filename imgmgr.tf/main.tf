@@ -22,6 +22,11 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias = "east1"
+  region  = "us-east-1"
+}
+
 # data
 
 data "terraform_remote_state" "vpc" {
@@ -46,6 +51,15 @@ data "aws_ami" "latest-amazon2" {
     name = "architecture"
     values = ["x86_64"]
   }
+}
+
+data "aws_acm_certificate" "cf_cert" {
+  count = var.cf_alias != null ? 1 : 0
+
+  provider = aws.east1
+
+  domain = var.cf_alias
+  most_recent = true
 }
 
 # resources
@@ -288,6 +302,7 @@ resource "aws_cloudwatch_metric_alarm" "asg_cpu_low" {
 resource "aws_cloudfront_distribution" "cf" {
   enabled = true
   price_class = "PriceClass_100"
+  aliases = var.cf_alias != null ? [var.cf_alias] : null
   
   origin {
     domain_name = aws_lb.load_balancer.dns_name
@@ -310,7 +325,10 @@ resource "aws_cloudfront_distribution" "cf" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    # cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.cf_alias != null ? null : true
+    acm_certificate_arn = var.cf_alias != null ? data.aws_acm_certificate.cf_cert[0].arn : null
+    ssl_support_method = var.cf_alias != null ? "sni-only" : null
   }
 
   restrictions {
@@ -323,7 +341,7 @@ resource "aws_cloudfront_distribution" "cf" {
 # outputs
 
 output "cloudfront_url" {
-  value = join("",["https://", aws_cloudfront_distribution.cf.domain_name])
+  value = var.cf_alias != null ? join("",["https://", one(aws_cloudfront_distribution.cf.aliases)]) : join("",["https://", aws_cloudfront_distribution.cf.domain_name])
   description = "The CloudFront URL for img-mgr"
 }
 

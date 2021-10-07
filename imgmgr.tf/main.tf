@@ -331,3 +331,8 @@ output "lb_url" {
   value = join("",["http://",aws_lb.load_balancer.dns_name])
   description = "The Load Balancer URL for img-mgr"
 }
+
+output "cloudfront_zone_id" {
+  value = aws_cloudfront_distribution.cf.hosted_zone_id
+  description = "The CloudFront hosted zone ID"
+}

@@ -9,3 +9,4 @@ deployments:
       # - etc...
     regions:
       - us-east-2
+      - us-east-1

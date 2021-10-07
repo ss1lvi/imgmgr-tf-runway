@@ -1,4 +1,4 @@
-variable "domain_name" {
+variable "hosted_zone" {
   type = string
-  description = "your domain name"
+  description = "your hosted zone in route 53"
 }

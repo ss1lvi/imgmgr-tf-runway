@@ -43,6 +43,10 @@ data "aws_route53_zone" "myzone" {
 resource "aws_acm_certificate" "cert" {
   domain_name       = "imgmgr.${var.hosted_zone}"
   validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_route53_record" "www" {

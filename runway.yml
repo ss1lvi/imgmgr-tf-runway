@@ -6,7 +6,10 @@ deployments:
       - path: vpc.tf
       - path: imgmgr.tf
       - path: itsalwaysdns.tf
+      - path: vpc_alt.tf
+      - path: imgmgr_alt.tf
       # - etc...
     regions:
       - us-east-2
       - us-east-1
+      - us-west-2

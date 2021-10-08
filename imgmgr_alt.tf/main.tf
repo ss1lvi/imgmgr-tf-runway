@@ -18,7 +18,7 @@ data "terraform_remote_state" "vpc_alt" {
    }
 }
 
-data "aws_ami" "latest-amazon2" {
+data "aws_ami" "latest_amazon2" {
 # finds the latest amazon linux 2 AMI
   owners = ["amazon"]
   most_recent = true

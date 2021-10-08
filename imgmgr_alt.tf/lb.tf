@@ -8,7 +8,7 @@ module "alb" {
 
   vpc_id             = data.terraform_remote_state.vpc_alt.outputs.vpc_id
   subnets            = data.terraform_remote_state.vpc_alt.outputs.public_subnets
-  security_groups    = [module.sg_lb]
+  security_groups    = [module.sg_lb.security_group_id]
 
   target_groups = [
     {

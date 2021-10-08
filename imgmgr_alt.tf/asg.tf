@@ -17,7 +17,7 @@ module "asg_imgmgr" {
   instance_refresh = {
     strategy = "Rolling"
     preferences = {
-      min_healthy_percentage = 50
+      min_healthy_percentage = 0
     }
     triggers = ["tag"]
   }
@@ -32,8 +32,7 @@ module "asg_imgmgr" {
   image_id                 = data.aws_ami.latest_amazon2.image_id
   instance_type            = "t2.micro"
   key_name                 = var.ssh_key
-  iam_instance_profile_arn = aws_iam_instance_profile.instance_profile.arn
+  iam_instance_profile_arn = module.iam_role_imgmgr.iam_instance_profile_arn
   security_groups          = [module.sg_server.security_group_id]
-
+  user_data_base64         = base64encode(templatefile("${path.module}/install.sh", { S3Bucket = aws_s3_bucket.img_bucket.id }))
 }
-

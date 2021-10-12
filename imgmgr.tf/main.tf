@@ -35,7 +35,7 @@ data "terraform_remote_state" "vpc" {
   config = {
     bucket = "ssilvidi-dev-tf-state-terraformstatebucket-1my31yzv88c0f"
     region = "us-east-2"
-    key = "env:/dev/vpc.tfstate"
+    key = "env:/common/vpc.tfstate"
    }
 }
 
@@ -72,7 +72,7 @@ resource "aws_iam_instance_profile" "instance_profile" {
 }
 
 resource "aws_iam_role" "imgmgr_role" {
-  name = "imgmgr_role"
+  name_prefix = "${var.application}-${terraform.workspace}-role"
   managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"]
 
   assume_role_policy = jsonencode({
@@ -140,11 +140,13 @@ resource "aws_s3_bucket" "img_bucket" {
 }
 
 resource "aws_lb" "load_balancer" {
+  name = "${var.application}-${terraform.workspace}-lb"
   security_groups = [aws_security_group.sg_lb.id]
   subnets = data.terraform_remote_state.vpc.outputs.public_subnets
 }
 
 resource "aws_alb_target_group" "lb_targets" {
+  name = "${var.application}-${terraform.workspace}-lbtg"
   port = 80
   protocol = "HTTP"
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
@@ -202,7 +204,7 @@ resource "aws_security_group" "sg_server" {
 }
 
 resource "aws_launch_template" "imgmgr_template" {
-  name = "imgmgr_template"
+  name_prefix = "${var.application}-${terraform.workspace}-"
   image_id = data.aws_ami.latest-amazon2.image_id
   instance_type = var.instance_type
   key_name = var.ssh_key
@@ -248,7 +250,7 @@ resource "aws_autoscaling_group" "app_server_group" {
 }
 
 resource "aws_autoscaling_policy" "scale_out_policy" {
-  name = "scale_out_policy"
+  name = "${var.application}-${terraform.workspace}-scale_out_policy"
   autoscaling_group_name = aws_autoscaling_group.app_server_group.name
   adjustment_type = "ChangeInCapacity"
   policy_type = "SimpleScaling"
@@ -257,7 +259,7 @@ resource "aws_autoscaling_policy" "scale_out_policy" {
 }
 
 resource "aws_autoscaling_policy" "scale_in_policy" {
-  name = "scale_in_policy"
+  name = "${var.application}-${terraform.workspace}-scale_in_policy"
   autoscaling_group_name = aws_autoscaling_group.app_server_group.name
   adjustment_type = "ChangeInCapacity"
   policy_type = "SimpleScaling"
@@ -266,7 +268,7 @@ resource "aws_autoscaling_policy" "scale_in_policy" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "asg_cpu_high" {
-  alarm_name = "asg_cpu_high"
+  alarm_name = "${var.application}-${terraform.workspace}-asg_cpu_high"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods = 1
   datapoints_to_alarm = 1
@@ -285,7 +287,7 @@ resource "aws_cloudwatch_metric_alarm" "asg_cpu_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "asg_cpu_low" {
-  alarm_name = "asg_cpu_low"
+  alarm_name = "${var.application}-${terraform.workspace}-asg_cpu_low"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = 1
   datapoints_to_alarm = 1
@@ -311,7 +313,7 @@ resource "aws_cloudfront_distribution" "cf" {
   
   origin {
     domain_name = aws_lb.load_balancer.dns_name
-    origin_id = "imgmgr-origin"
+    origin_id = "${var.application}-${terraform.workspace}-origin"
     custom_origin_config {
       http_port = 80
       https_port = 443
@@ -323,7 +325,7 @@ resource "aws_cloudfront_distribution" "cf" {
   default_cache_behavior {
     allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods = [ "GET", "HEAD" ]
-    target_origin_id = "imgmgr-origin"
+    target_origin_id = "${var.application}-${terraform.workspace}-origin"
     # cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
     cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     viewer_protocol_policy = "redirect-to-https"

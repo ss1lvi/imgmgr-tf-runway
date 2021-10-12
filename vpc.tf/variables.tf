@@ -13,7 +13,7 @@ variable "customer" {
 variable "environment" {
   type        = string
   description = "the environment (prod, dev, etc.)"
-  default     = "test"
+  default     = "common"
 }
 
 variable "vpc_cidr" {
